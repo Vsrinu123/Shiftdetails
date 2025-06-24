@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shift Calendar – Fixed</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+    .calendar, .day { display: grid; }
+    .calendar { grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .header { background: #2a4d69; color: white; text-align: center; padding: 10px; border-radius: 4px; }
+    .day { background: #e9eff5; padding: 10px; min-height: 100px; border-radius: 4px; }
+    .shift { font-size: 13px; margin-top: 5px; cursor: pointer; }
+    .leave { color: red; font-weight: bold; }
+    .off { color: gray; font-style: italic; }
+    .summary { margin-top: 20px; background: white; padding: 10px; border-radius: 6px; }
+    .controls { margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+	.today {
+  border: 2px solid gold !important;
+  box-shadow: 0 0 5px orange;
+}
+
+<style>
+  body.dark {
+    background-color: #1e1e1e;
+    color: #f1f1f1;
+  }
+  .calendar.dark .day {
+    background-color: #292929;
+  }
+  .calendar.dark .header {
+    background-color: #444;
+    color: #fff;
+  }
+  
+  .dark .shift { color: #ffffff; }
+  .dark .shift.leave { color: #ff6b6b; }
+  .dark .shift.off { color: #cccccc; }
+  .dark .shift strong { color: #ffffff; }
+  .dark .day strong { color: #ffffff; } /* Fix for date numbers */
+.day.weekend {
+    background-color: #e7f0ff; /* Light mode weekend */
+    border-left: 4px solid #3388cc;
+  }
+
+  body.dark .day.weekend {
+    background-color: #333;  /* Better for dark mode */
+    border-left: 4px solid #80bfff;
+  }
+
+
+</style>
+  </style>
+</head>
+<body>
+  <header>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAHU0lEQVR4AbVXA3QlSBDcZ53inG3bXBvJ2fZdbNt2srbNZO3d2LZtJ3U1/ZJ3yZr93vf86equru6ZCd5nE5sMd+zAjXoYqMe27ViwZTPmbdiAuevXY8GmTTDYug2G2/9f9/HOnQhNTc2Z8O3evU260dG4UQ+diEhoBQVB08MTj/n64vmAQNzp6QlNXz/ohIdDNypK1unHxOCvgwdzJny3b1+THj/o34CHngIREgp9OjffsgXZ1dWoaG7GppQUvBIcAi1/f+hGRsrau2Jj8fcNBxAZBU0fXyxYtBit3V0Ya2uSEnGnlxd0w8IF6M0BwPRrMN3ue/fhXMuvr8NTAQHQZoZuHoBIAmCU/2zciKHhISgbBsROlZTgQWZHJzTsZgKIgjaL7nEW356sTAwOCQjUtrXhx9WroeXlDb3wiGsEEE0HUdESpTxYzdxobAFy83ACCICGmzsedffATyuWw5zZmMiotZxdoOXnB6mBqKsEIJuTX53gYGgxOi0fH+WIm4VJ1AIsLAJ3MfqngiQD0HV0xINOzniIDy07ezzO/zwbEoK7KFHdiAjceUUypGPZnGnTpoTu8vCA6datsN+1C88xGk03N34fAD0VIV/fiYhCWlUl4rOz8bqnFw7m5eJQXh5ecHXDltRUZFCWb3JPbUrysgAk6khGTdRaLJ67PdwRcfQIevr7MTw8jNyaathu24bHWHR30MHtzs6YQ7D9gwM4VViA15mByuYmpJaV4jlbW2RWVKChowOvUwVagUHnAzg/5RES1YOM9KuVK/E6HZU1NaKupQWbjh9HfVurVPrpkmJ8vmgRbjUywk+LF0PZupMn8aaDA1q6OrEjORnPW1mhsqkJRQ0NeIodUTsoWACcXwMSdZQUiiZ5fJi8reUGpwoK8IajE0ob6tHU3g7TuDjMp97XHjuGXmakvbsb3tu2Ii4hAcqc1Azw86cKBhFAuj50dUV3Xy9OFhfjPtKoy6yeB0AedK7DItHz9sGrLLipoaHo7O1FYlERXrGxQQmbibKBwUEcycrC99zIZOFClNXXy3ddXKsAzWHWbNeuky7wXVQkfo6JhbKVZ85AmwphgOdRIGnXocN7Gbl7fDw2nj2L6b4+BNCDs4WFeJlpLKWj+tZWxKekMKI+dPT0IGr3bnzJdYn5uVCWU1mJp8zNsZNrGjva8aqdHWL274cySxawBucEFUUA42UoutYk8lmMqLu/DwkZGZjk7oaOMQDKSEFJXR3etbbGd5RgIQtR2d6kJGw4cgTKggnoVTtb1kgb4jPS8biZKdLKytBOsFPpg9SKrwsC0PD2hgEBKO7i09Iw0cVFohwFMEpBemkpDAP88Sare396GoaGhkUZDayPd6kG+3VMPz8bLVum6BBaTpH/BylN9pILd0LyL318fmwcBsYA6BwPQH7rGxhAG6ed49o1eNnEhIBKoCw6IR5PmZkhmzQUc+1zlpZYdOgglLns3gVNd3fpluyqFwAQNQogdjyAcRQ0IL+6CqZLl6CotlYii2eDaaa+89lkXuAaF55+lLnzRPS6vT1qKdvKlma8qboolSEtPOYaALxiZS0AsiorcOeff+IjSkvVg7LWri58yZqYyAgV9zlVVXiW0Yfv2wtlYYcPs/rdoDsyCfWvDEDq+AyMAqgox71//QUDzoLKxkbpjJarVknqT+TnCz0/c78pnh6SmWL+53VKm4NIaKbzKwDAdrpvHIACvERplTbUMepahOzYqQqOld0Na47ZR42NseXsGSiLpeQeMzHFwawsGccWpELTjdzLSSjmMgCoggVxcQJgb2oKPrR3QAedJBXkYypbq4p4GJCKL2b6v+WseJrAtrBnKNuTmkrnJgiiFMGVG1OScS87n3Zg4Aj3lwNAjS5YvFgoOMaJ9gs5UzJsI8fFNTUYomP1eSVb8Ku2NphEzk8y7cr2Z2biWQsLmK9cKbQkl5fhZdLE0S1zRbi/DABpw88S7V6mr4e9u52OR625swMbT5/GbG74pKkp+/161La2YIhp3nD6lGTCePkyyVghO+ZUdUD19KTswqA/4vxSAGQRW6QcOB5lLYQfOcwCqkcCI1ON5V0nJ4nQaOlSpJaWCg2NrAPnDRuYdmN4kOtuzoJC6n8Oe4kGUz+26i8PQObB6OEjQI7QTzPa51iIBiEhIqmCERp62Kp3ckpOJgWv29thEwtwkMMotbwcUxSV4jyUWRXnVwxg7EiWwaRBALOWLEYOHdNkuGziRDMkTUy58M0RLTWzhap5ld/zWC6Rn+/8SgGMzQabizYpmcjPxjxcfsiT0SvsbqbLlyO5pESyUcVOZ8+73v0ennIp4X9G0359APiQKHTDw+VkdJuLK75YthSF7APDI2pYm5iID/k7dU6pqcNm5KjzKwVw+cupjlKHXDiD8TBl5XvoEFYmnsVc9gtdttc7vL3ltqOjTlJRV3iJHXs59U5MbDK4kis3r9fzedU2WL0GhitXYTYfCzZs5PdbYbB9O2SPK3/I9TyE1/P/AJCn0FdFtD8jAAAAAElFTkSuQmCC" alt="Company Logo">
+    <span style="font-size:22px;">Information Dynamics India Pvt Ltd</span>
+  </header>
+  <h2>Shift Calendar - <span id="userDisplay"></span></h2>
+  <div class="controls">
+    <select id="month"></select>
+    <select id="year"></select>
+    <button onclick="generateCalendar()">Generate</button>
+    <button onclick="exportExcel()">Export Excel</button>
+    <button onclick="exportPDF()">Export PDF</button>
+    <button id="editBtn" onclick="toggleEditMode()" style="display:none;">Toggle Edit Mode</button>
+	<button onclick="toggleDarkMode()">🌙 Toggle Dark Mode</button>
+	<button onclick="downloadShiftSummaryCSV()">⬇️ Download Shift Summary (CSV)</button>
+  </div>
+  <div>
+    Filter:
+    <select id="filterName"></select>
+    <input type="text" id="filterText" placeholder="Shift keyword" />
+    <button onclick="generateCalendar()">Apply Filter</button>
+  </div>
+  <div class="calendar" id="calendar"></div>
+  <div class="summary" id="summary"></div>
+  <table id="exportTable" style="display:none;"></table>
+
+  <script>
+  
+    const lead = "Venkatrao Srinu";
+    const members = ["Nagarjun", "Kiruthika", "Ruksar"];
+    const userMap = {
+      venkatraosrinu: lead,
+      nagarjun: "Nagarjun",
+      kiruthika: "Kiruthika",
+      ruksar: "Ruksar"
+    };
+    let currentUser = "", editMode = false;
+	const holidays = {
+      "2025-01-01": "New Year",
+      "2025-01-14": "Pongal",
+      "2025-01-15": "Thiruvalluvar Day",
+      "2025-01-26": "Republic Day",
+      "2025-03-31": "Ramzan",
+      "2025-05-01": "May Day",
+      "2025-08-15": "Independence Day",
+      "2025-08-27": "Vinayakar Chathurthi",
+      "2025-10-01": "Ayutha Pooja",
+      "2025-10-02": "Gandhi Jayanthi",
+      "2025-10-20": "Deepavali",
+      "2025-12-25": "Christmas"
+    };
+
+    function getUserFromURL() {
+      const u = new URLSearchParams(location.search).get("user") || "";
+      return userMap[u.toLowerCase().replace(/\s+/g, "")];
+    }
+	function toggleDarkMode() {
+  const dark = document.body.classList.toggle("dark");
+  document.getElementById("calendar").classList.toggle("dark", dark);
+  localStorage.setItem("darkMode", dark ? "yes" : "no");
+}
+
+window.onload = () => {
+  if (localStorage.getItem("darkMode") === "yes") {
+    document.body.classList.add("dark");
+    document.getElementById("calendar").classList.add("dark");
+  }
+
+  // existing user init + calendar init...
+};
+
+
+    function populateSelectors() {
+      const now = new Date();
+      const m = document.getElementById("month"), y = document.getElementById("year"), f = document.getElementById("filterName");
+      ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((n,i)=> m.add(new Option(n,i,i===now.getMonth())));
+      for (let yr = now.getFullYear(); yr <= now.getFullYear()+5; yr++) y.add(new Option(yr,yr,yr===now.getFullYear()));
+      f.innerHTML = `<option value="">All</option>` + [lead,...members].map(n=>`<option>${n}</option>`).join("");
+    }
+
+    function toggleEditMode() {
+      if (currentUser !== lead) return alert("Only Lead can edit");
+      editMode = !editMode;
+      alert("Edit Mode: " + (editMode ? "ON" : "OFF"));
+    }
+
+    function exportExcel() {
+      const table = document.getElementById("exportTable");
+      const wb = XLSX.utils.table_to_book(table);
+      XLSX.writeFile(wb, "ShiftCalendar.xlsx");
+    }
+
+    function exportPDF() {
+      const el = document.getElementById("calendar");
+      html2pdf().from(el).save("ShiftCalendar.pdf");
+    }
+
+    function generateCalendar() {
+      const cal = document.getElementById("calendar");
+      const m = +document.getElementById("month").value;
+      const y = +document.getElementById("year").value;
+      const fName = document.getElementById("filterName").value;
+      const fText = document.getElementById("filterText").value.toLowerCase();
+      const start = new Date(y, m, 1), end = new Date(y, m + 1, 0);
+      const offset = (start.getDay() + 6) % 7;
+      let rot = [...members], weekendGuy = rot[0], index = 0;
+      const leaveData = JSON.parse(localStorage.getItem("leaveData") || "{}");
+      let leaveCounts = {}, offCounts = {};
+      cal.innerHTML = "";
+      const tbl = document.getElementById("exportTable");
+      tbl.innerHTML = "";
+	  
+
+      ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].forEach(d => {
+        const div = document.createElement("div");
+        div.className = "header";
+        div.innerText = d;
+        cal.appendChild(div);
+      });
+	  
+
+      for (let i = 0; i < offset; i++) cal.appendChild(document.createElement("div"));
+      const tRow = tbl.insertRow();
+      tRow.innerHTML = "<th>Date</th><th>Shift</th>";
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        const wk = (d.getDay() + 6) % 7;
+        if (wk === 0 && d.getDate() !== 1) rot.push(rot.shift());
+        const [a,b1,b2] = rot;
+        let shifts = [];
+
+        if (wk === 3 || wk === 4) {
+          const active = members.filter(x=>x!==weekendGuy);
+          shifts = [`${lead}: 09:30 - 18:30`, `${active[0]}: 07:00 - 16:00`, `${active[1]}: 12:00 - 21:00`, `${weekendGuy}: OFF`];
+        } else if (wk === 5 || wk === 6) {
+          shifts = [`${weekendGuy}: 09:30 - 18:30`];
+          if (wk === 6) weekendGuy = members[++index % members.length];
+        } else {
+          shifts = [`${lead}: 09:30 - 18:30`, `${a}: 07:00 - 16:00`, `${b1}: 12:00 - 21:00`, `${b2}: 12:00 - 21:00`];
+        }
+
+        const box = document.createElement("div");
+box.className = "day";
+if (d.getDay() === 0 || d.getDay() === 6) {
+  box.classList.add("weekend");
+}
+box.innerHTML = `<strong>${d.getDate()}</strong>`;
+
+
+const today = new Date();
+if (
+  d.getDate() === today.getDate() &&
+  d.getMonth() === today.getMonth() &&
+  d.getFullYear() === today.getFullYear()
+) {
+  box.classList.add("today");
+}
+        const tr = tbl.insertRow();
+        tr.insertCell().innerText = dateStr;
+        tr.insertCell().innerText = shifts.join(", ");
+
+        shifts.forEach(s => {
+          const name = s.split(":")[0];
+          if (fName && name !== fName) return;
+          if (fText && !s.toLowerCase().includes(fText)) return;
+          const leave = leaveData[dateStr]?.includes(name);
+          const isOff = s.includes("OFF");
+          if (leave) leaveCounts[name] = (leaveCounts[name] || 0) + 1;
+          if (isOff) offCounts[name] = (offCounts[name] || 0) + 1;
+
+          const div = document.createElement("div");
+          div.className = "shift" + (isOff ? " off" : "") + (leave ? " leave" : "");
+          div.innerHTML = leave ? `&#x25CF; <strong>${name}:</strong> Leave` : s;
+
+         div.onclick = () => {
+  if (editMode && currentUser === lead) {
+    leaveData[dateStr] = leaveData[dateStr] || [];
+    const idx = leaveData[dateStr].indexOf(name);
+    if (idx >= 0) leaveData[dateStr].splice(idx, 1);
+    else leaveData[dateStr].push(name);
+    localStorage.setItem("leaveData", JSON.stringify(leaveData));
+    generateCalendar();
+  }
+};
+
+
+          box.appendChild(div);
+        });
+
+        cal.appendChild(box);
+      }
+
+      document.getElementById("summary").innerHTML = `
+        <strong>Summary:</strong><br>
+        Leaves: ${JSON.stringify(leaveCounts)}<br>
+        OFFs: ${JSON.stringify(offCounts)}
+      `;
+    }
+
+    window.onload = () => {
+      currentUser = getUserFromURL();
+      if (!currentUser) return document.body.innerHTML = "<h2 style='color:red;'>Access Denied. Use ?user=name</h2>";
+      document.getElementById("userDisplay").innerText = currentUser;
+      if (currentUser === lead) document.getElementById("editBtn").style.display = "inline-block";
+      populateSelectors();
+      generateCalendar();
+    };
+  </script>
+  <script>
+
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", isDark ? "yes" : "no");
+  document.getElementById("darkStatus").innerText = isDark ? "ON" : "OFF";
+}
+
+window.onload = () => {
+  const saved = localStorage.getItem("darkMode");
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  if (saved === "yes" || (saved !== "no" && prefersDark)) {
+    document.body.classList.add("dark");
+  }
+
+  document.getElementById("darkStatus").innerText = document.body.classList.contains("dark") ? "ON" : "OFF";
+
+  // Continue with calendar setup...
+  currentUser = getUserFromURL();
+  ...
+};
+function downloadShiftSummaryCSV() {
+  if (!latestSummary || Object.keys(latestSummary).length === 0) {
+    alert("Please generate calendar first.");
+    return;
+  }
+
+  let csv = "Name,Shifts\n";
+  for (const name in latestSummary) {
+    csv += `${name},${latestSummary[name]}\n`;
+  }
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "shift_summary.csv";
+  link.click();
+}
+
+</script>
+</body>
+</html>
